@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import localforage from 'localforage';
 import {
   DEFAULT_RESERVATION_TEMPLATE,
   DEFAULT_ORDER_TEMPLATE,
@@ -39,12 +40,9 @@ function loadFromStorage(key, fallback, validator) {
 
 export default function App() {
   const [adminTab, setAdminTab] = useState('events');
-  const [restaurants, setRestaurants] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.restaurants, INITIAL_RESTAURANTS, (v) => Array.isArray(v))
-  );
-  const [events, setEvents] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.events, INITIAL_EVENTS, (v) => Array.isArray(v))
-  );
+  const [restaurants, setRestaurants] = useState(INITIAL_RESTAURANTS);
+  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const storageLoadedRef = useRef(false);
   const [showOrderModal, setShowOrderModal] = useState(null);
   const [showLinkModal, setShowLinkModal] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(null);
@@ -73,15 +71,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      if (events != null) localStorage.setItem(STORAGE_KEYS.events, JSON.stringify(events));
-    } catch (e) {}
+    if (typeof window === 'undefined') return;
+    Promise.all([
+      localforage.getItem(STORAGE_KEYS.restaurants),
+      localforage.getItem(STORAGE_KEYS.events),
+    ]).then(([savedRestaurants, savedEvents]) => {
+      if (Array.isArray(savedRestaurants)) setRestaurants(savedRestaurants);
+      if (Array.isArray(savedEvents)) setEvents(savedEvents);
+      storageLoadedRef.current = true;
+    }).catch(() => { storageLoadedRef.current = true; });
+  }, []);
+
+  useEffect(() => {
+    if (!storageLoadedRef.current) return;
+    if (events != null) localforage.setItem(STORAGE_KEYS.events, events).catch(() => {});
   }, [events]);
 
   useEffect(() => {
-    try {
-      if (restaurants != null) localStorage.setItem(STORAGE_KEYS.restaurants, JSON.stringify(restaurants));
-    } catch (e) {}
+    if (!storageLoadedRef.current) return;
+    if (restaurants != null) localforage.setItem(STORAGE_KEYS.restaurants, restaurants).catch(() => {});
   }, [restaurants]);
 
   useEffect(() => {
