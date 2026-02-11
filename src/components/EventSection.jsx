@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Plus, Trash2, X, Calendar, Users, Store, Bell, Link as LinkIcon, Send, ClipboardList, RefreshCcw, Search, Layout } from 'lucide-react';
+import { Plus, Trash2, X, Calendar, Users, Store, Bell, Link as LinkIcon, Send, ClipboardList, RefreshCcw, Layout } from 'lucide-react';
 import { getFormattedDateWithDay, formatEventDateDisplay, serializeDateEntries } from '../utils/helpers.js';
 
 const defaultDateEntries = () => [{ id: Date.now(), type: 'range', start: '', end: '' }];
 
-export default function EventSection({ events, restaurants, onAdd, onDelete, onReset, onOpenLinkModal, onOpenAssign, onOpenOrder, onOpenTemplate, onOpenUserView, generateLink }) {
+export default function EventSection({ events, restaurants, onAdd, onDelete, onReset, onOpenLinkModal, onOpenAssign, onOpenOrder, onOpenTemplate, generateLink }) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ orgName: '', manager: '', contact: '', dateEntries: defaultDateEntries() });
 
@@ -99,12 +99,8 @@ export default function EventSection({ events, restaurants, onAdd, onDelete, onR
                     {!hasGroups && needsOrderCheck && <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-1 rounded animate-pulse flex items-center gap-1 shadow-sm font-black"><Bell size={10}/> 최종 주문 도착</span>}
                     {!hasGroups && hasReorderNeedingCheck && <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-1 rounded animate-pulse flex items-center gap-1 shadow-sm font-black">재주문 확인 필요</span>}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div>
                     <h3 className="text-2xl font-black text-stone-800 tracking-tight">{event.orgName}</h3>
-                    <div className="flex items-center bg-stone-100 p-1 rounded-xl shadow-inner font-bold">
-                      <button onClick={() => onOpenUserView(event.id, 'res')} className="p-2 hover:bg-white hover:text-blue-600 text-stone-400 rounded-lg transition-all text-xs font-black" title="사용자 예약 신청 화면"><Search size={14} className="inline mr-1"/>예약기입</button>
-                      <button onClick={() => onOpenUserView(event.id, 'order')} className="p-2 hover:bg-white hover:text-emerald-600 text-stone-400 rounded-lg transition-all border-l border-stone-200 text-xs font-black" title="사용자 메뉴 취합 화면"><Search size={14} className="inline mr-1"/>메뉴기입</button>
-                    </div>
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-stone-400 font-bold mt-2">
                     <span className="flex items-center gap-1.5 font-black"><Calendar size={16} className="text-emerald-600 font-black"/> {displayDate(event.date)}</span>

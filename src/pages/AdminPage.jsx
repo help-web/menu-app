@@ -1,4 +1,4 @@
-import { Utensils, Users, Store, Wrench } from 'lucide-react';
+import { Utensils, Users, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import EventSection from '../components/EventSection.jsx';
 import RestaurantSection from '../components/RestaurantSection.jsx';
@@ -34,7 +34,6 @@ export default function AdminPage({
   onOpenAssign,
   onOpenOrder,
   onOpenTemplate,
-  onOpenUserView,
   generateLink,
   assignRestaurant,
   assignPerRow,
@@ -43,8 +42,6 @@ export default function AdminPage({
   copyToClipboard,
   showToast,
   onUpdateRestaurants,
-  targetEventId,
-  debugSetStatus,
 }) {
   const navigate = useNavigate();
   return (
@@ -74,7 +71,6 @@ export default function AdminPage({
             onOpenAssign={onOpenAssign}
             onOpenOrder={onOpenOrder}
             onOpenTemplate={onOpenTemplate}
-            onOpenUserView={onOpenUserView}
             generateLink={generateLink}
           />
         ) : (
@@ -101,25 +97,6 @@ export default function AdminPage({
       {showLinkModal && <LinkModal data={showLinkModal} resT={resTemplate} orderT={orderTemplate} restaurants={restaurants} baseUrl={baseUrl} onClose={() => setShowLinkModal(null)} onCopy={copyToClipboard} />}
       {showAssignModal && <AssignModal event={showAssignModal} restaurants={restaurants} onAssign={assignRestaurant} onAssignPerRow={assignPerRow} onClose={() => setShowAssignModal(null)} onCopy={copyToClipboard} showToast={showToast} />}
       {showOrderModal && <OrderDetailsModal event={showOrderModal.event ?? showOrderModal} groupId={showOrderModal.groupId} onClose={() => setShowOrderModal(null)} onConfirm={() => markOrderRead((showOrderModal.event ?? showOrderModal).id)} onCopy={copyToClipboard} showToast={showToast} />}
-
-      <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-2 items-start animate-in slide-in-from-bottom-10">
-         <div className="flex items-center bg-stone-900/90 backdrop-blur text-white p-2 rounded-2xl shadow-2xl border border-white/10 font-black gap-2">
-            <a href="/" className={`px-4 py-2 rounded-xl text-[10px] tracking-widest transition-all bg-white text-stone-900 shadow-lg`}>ADMIN</a>
-            <a href="/reservations" className="px-4 py-2 rounded-xl text-[10px] tracking-widest transition-all text-stone-400 hover:text-white">예약 내역</a>
-            <a href={events[0] ? `/res/${events[0].id}` : '#'} className="px-4 py-2 rounded-xl text-[10px] tracking-widest transition-all text-stone-400 hover:text-white">RES PREVIEW</a>
-            <a href={events[0] ? `/order/${events[0].id}` : '#'} className="px-4 py-2 rounded-xl text-[10px] tracking-widest transition-all text-stone-400 hover:text-white">MENU PREVIEW</a>
-         </div>
-
-         {targetEventId && (
-            <div className="flex items-center bg-white/90 backdrop-blur text-stone-900 p-2 rounded-2xl shadow-xl border border-stone-200 font-black gap-2">
-               <div className="px-2 text-[9px] font-black text-stone-400 flex items-center gap-1"><Wrench size={10}/> STATUS SET:</div>
-               <button onClick={() => debugSetStatus(targetEventId, 'res_pending')} className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg text-[10px]">초기화</button>
-               <button onClick={() => debugSetStatus(targetEventId, 'res_submitted')} className="px-3 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg text-[10px]">예약접수</button>
-               <button onClick={() => debugSetStatus(targetEventId, 'assigned')} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg text-[10px]">배정완료</button>
-               <button onClick={() => debugSetStatus(targetEventId, 'ordered')} className="px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-[10px]">주문도착</button>
-            </div>
-         )}
-      </div>
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-stone-900 text-white px-8 py-4 rounded-full shadow-2xl font-bold border border-white/10 animate-in slide-in-from-bottom-5">

@@ -187,36 +187,6 @@ export default function App() {
     showToast('행사 상태가 초기화되었습니다. 다시 테스트하세요.');
   };
 
-  const debugSetStatus = (eventId, status) => {
-    setEvents(prev => prev.map(evt => {
-      if (evt.id === eventId) {
-        let newData = { ...evt, status, unreadRes: false, unreadOrder: false };
-        if (status === 'res_pending') {
-          newData.resData = null;
-          newData.assignedRestaurantId = null;
-          newData.latestOrder = null;
-        } else if (status === 'res_submitted') {
-          newData.resData = [{ id: 1, date: evt.date, headcount: '10', arrivalTime: '12:00', menuType: '정식', paymentMethod: '기관 직접 결제' }];
-          newData.unreadRes = true;
-          newData.assignedRestaurantId = null;
-          newData.latestOrder = null;
-        } else if (status === 'assigned') {
-          newData.resData = [{ id: 1, date: evt.date, headcount: '10', arrivalTime: '12:00', menuType: '정식', paymentMethod: '기관 직접 결제' }];
-          newData.assignedRestaurantId = restaurants[0].id;
-          newData.latestOrder = null;
-        } else if (status === 'ordered') {
-          newData.resData = [{ id: 1, date: evt.date, headcount: '10', arrivalTime: '12:00', menuType: '정식', paymentMethod: '기관 직접 결제' }];
-          newData.assignedRestaurantId = restaurants[0].id;
-          newData.unreadOrder = true;
-          newData.latestOrder = { id: `ord-${Date.now()}`, restaurantName: restaurants[0].name, rooms: [{ id: 1, roomName: '회의실 1', items: { '보리굴비 정식': 5 }, totalPrice: 125000 }], paymentMethod: '기관 직접 결제', timestamp: new Date().toISOString(), isUpdate: false };
-        }
-        return newData;
-      }
-      return evt;
-    }));
-    showToast(`상태가 [${status}]로 변경되었습니다.`);
-  };
-
   const markOrderRead = (eventId) => {
     setEvents(prev => prev.map(evt => {
       if (evt.id !== eventId) return evt;
@@ -234,10 +204,6 @@ export default function App() {
     return `${baseUrl}${type}/${eventId}`;
   };
 
-  const onOpenUserView = (id, mode) => {
-    navigate(mode === 'res' ? `/res/${id}` : `/order/${id}`);
-  };
-
   const onSaveTemplate = (rt, ot, nt, at, ad) => {
     setResTemplate(rt);
     setOrderTemplate(ot);
@@ -253,8 +219,6 @@ export default function App() {
     else if (action === 'update') setRestaurants(p => p.map(x => x.id === payload.id ? payload : x));
     else if (action === 'delete') setRestaurants(p => p.filter(x => x.id !== payload));
   };
-
-  const targetEventId = events.length > 0 ? events[0].id : null;
 
   return (
     <div className="font-sans antialiased text-stone-900 bg-stone-50 min-h-screen">
@@ -287,7 +251,6 @@ export default function App() {
             onOpenAssign={(evt) => setShowAssignModal(evt)}
             onOpenOrder={(evt, groupId) => setShowOrderModal({ event: evt, groupId })}
             onOpenTemplate={() => setShowTemplateModal(true)}
-            onOpenUserView={onOpenUserView}
             generateLink={generateLink}
             assignRestaurant={assignRestaurant}
             assignPerRow={assignPerRow}
@@ -296,8 +259,6 @@ export default function App() {
             copyToClipboard={copyToClipboard}
             showToast={showToast}
             onUpdateRestaurants={onUpdateRestaurants}
-            targetEventId={targetEventId}
-            debugSetStatus={debugSetStatus}
           />
         } />
         <Route path="/res/:eventId" element={
