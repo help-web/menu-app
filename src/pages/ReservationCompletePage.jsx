@@ -92,12 +92,9 @@ export default function ReservationCompletePage({ fetchEvent, onBack }) {
         <button
           type="button"
           onClick={loadEvent}
-          className="text-stone-400 text-xs font-bold flex items-center gap-2 mx-auto mb-4 hover:text-stone-600"
+          className="text-stone-400 text-xs font-bold flex items-center gap-2 mx-auto hover:text-stone-600"
         >
           <RefreshCw size={14} /> 상태 새로고침
-        </button>
-        <button type="button" onClick={onBack} className="text-stone-400 text-xs font-black uppercase hover:text-stone-600 flex items-center gap-2 mx-auto">
-          <ArrowLeft size={14} /> 관리자 페이지로
         </button>
       </div>
     </div>
