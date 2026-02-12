@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Clock, CheckCircle, UtensilsCrossed, ArrowLeft, RefreshCw } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Clock, CheckCircle, UtensilsCrossed, ArrowLeft, RefreshCw, RotateCcw } from 'lucide-react';
+import { OrderSummary } from './OrderCompletePage.jsx';
 
 const STATUS_CONFIG = {
   res_pending: {
@@ -35,6 +36,7 @@ const STATUS_CONFIG = {
 
 export default function ReservationCompletePage({ fetchEvent, onBack }) {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -80,6 +82,9 @@ export default function ReservationCompletePage({ fetchEvent, onBack }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.res_submitted;
   const Icon = config.icon;
 
+  const order = status === 'ordered' ? (event.latestOrder || (event.orders || []).slice(-1)[0]) : null;
+  const handleReorder = () => navigate(`/order/${eventId}`);
+
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-[2.5rem] shadow-2xl p-8 sm:p-12 text-center">
@@ -87,15 +92,33 @@ export default function ReservationCompletePage({ fetchEvent, onBack }) {
           <Icon size={40} className="sm:w-12 sm:h-12" />
         </div>
         <h1 className="text-xl sm:text-2xl font-black text-stone-800 mb-2">{config.label}</h1>
-        <p className="text-sm text-stone-500 font-bold leading-relaxed mb-8">{config.description}</p>
+        <p className="text-sm text-stone-500 font-bold leading-relaxed mb-6">{config.description}</p>
         <p className="text-xs text-stone-400 font-bold mb-6">{event.orgName}</p>
-        <button
-          type="button"
-          onClick={loadEvent}
-          className="text-stone-400 text-xs font-bold flex items-center gap-2 mx-auto hover:text-stone-600"
-        >
-          <RefreshCw size={14} /> 상태 새로고침
-        </button>
+
+        {status === 'ordered' && order && (
+          <div className="mb-6 text-left">
+            <OrderSummary order={order} />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={loadEvent}
+            className="text-stone-400 text-xs font-bold flex items-center justify-center gap-2 mx-auto hover:text-stone-600"
+          >
+            <RefreshCw size={14} /> 상태 새로고침
+          </button>
+          {status === 'ordered' && (
+            <button
+              type="button"
+              onClick={handleReorder}
+              className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-stone-800 transition active:scale-[0.98]"
+            >
+              <RotateCcw size={18} /> 재주문하기
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

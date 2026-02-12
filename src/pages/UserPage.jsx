@@ -186,10 +186,10 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
         orderPayload.rooms = rooms;
       }
       onSubmitOrder(event.id, orderPayload, selectedGroupId ?? undefined, isReplacing);
-      setIsResSubmitted(true);
+      if (mode === 'res') setIsResSubmitted(true);
   };
 
-  if (isResSubmitted) {
+  if (isResSubmitted && mode === 'res') {
       return (
         <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in">
              <div className="w-full max-w-md bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl p-8 sm:p-16 text-center space-y-6 sm:space-y-8 font-black">

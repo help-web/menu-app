@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Check, Store, LayoutGrid, RefreshCw, RotateCcw } from 'lucide-react';
 
-function OrderSummary({ order }) {
+export function OrderSummary({ order }) {
+  if (!order || typeof order !== 'object') return null;
   const isSetOrder = order.menuType === 'set';
   const total = isSetOrder
     ? (order.setQuantity ?? 0) * (order.setPrice ?? 0)

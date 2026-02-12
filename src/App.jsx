@@ -107,14 +107,15 @@ function restaurantRowToApp(row) {
 }
 
 function restaurantAppToRow(r) {
+  if (!r) return null;
   return {
-    name: r.name,
+    name: r.name ?? '',
     menu_image: r.menuImage ?? '',
     map_image: r.mapImage ?? '',
-    items: r.ilpumMenus ?? r.items ?? [],
-    ilpum_menus: r.ilpumMenus ?? [],
-    set_menus: r.setMenus ?? [],
-    meal_options: r.mealOptions ?? [],
+    items: Array.isArray(r.ilpumMenus) ? r.ilpumMenus : (Array.isArray(r.items) ? r.items : []),
+    ilpum_menus: Array.isArray(r.ilpumMenus) ? r.ilpumMenus : [],
+    set_menus: Array.isArray(r.setMenus) ? r.setMenus : [],
+    meal_options: Array.isArray(r.mealOptions) ? r.mealOptions : [],
   };
 }
 
@@ -386,11 +387,26 @@ export default function App() {
       const { data, error } = await supabase.from('restaurants').insert([row]).select();
       if (!error && data?.[0]) {
         setRestaurants((prev) => [restaurantRowToApp(data[0]), ...prev]);
+      } else if (error) {
+        showToast('식당 추가에 실패했습니다.');
       }
     } else if (action === 'update') {
+      if (!payload?.id) {
+        showToast('식당 정보 저장에 실패했습니다. (식당 ID 없음)');
+        return;
+      }
       const row = restaurantAppToRow(payload);
       const { error } = await supabase.from('restaurants').update(row).eq('id', payload.id);
-      if (!error) {
+      if (error) {
+        console.error('Restaurant update error:', error);
+        const msg = error.message || error.code || '';
+        showToast(msg ? `식당 정보 저장 실패: ${msg}` : '식당 정보 저장에 실패했습니다.');
+        return;
+      }
+      const { data, error: fetchError } = await supabase.from('restaurants').select('*').eq('id', payload.id).single();
+      if (!fetchError && data) {
+        setRestaurants((prev) => prev.map((x) => (x.id === payload.id ? restaurantRowToApp(data) : x)));
+      } else {
         setRestaurants((prev) => prev.map((x) => (x.id === payload.id ? { ...payload } : x)));
       }
     } else if (action === 'delete') {
