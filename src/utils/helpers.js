@@ -79,8 +79,11 @@ export function parseDateEntries(dateStr) {
 }
 
 export function getBaseUrl() {
-  if (typeof window === 'undefined') return '';
-  return window.location.origin + (import.meta.env.BASE_URL || '/');
+  if (import.meta.env.PROD) {
+    if (typeof window === 'undefined') return '';
+    return window.location.origin + '/';
+  }
+  return 'https://menu-app-eight-liard.vercel.app/';
 }
 
 export function copyTextToClipboard(text) {
