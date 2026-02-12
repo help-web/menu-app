@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 function OrderCard({ event, order, showToast }) {
   const isSetOrder = order.menuType === 'set';
   const total = isSetOrder
-    ? (order.setQuantity ?? 0) * (order.setPrice ?? 0) + (order.mealTotal ?? 0)
+    ? (order.setQuantity ?? 0) * (order.setPrice ?? 0)
     : (order.rooms || []).reduce((a, r) => a + (r.totalPrice ?? 0), 0);
   const final = order.paymentMethod?.includes('위드스페이스') ? Math.round(total * 1.1) : total;
   const isReorder = order.isReorder;

@@ -152,7 +152,6 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
   const selectedSet = (setTypeId != null ? setMenus.find(m => m.id === setTypeId || m.name === setTypeId) : null) || (setMenus[0] ?? null);
   const effectiveSetId = selectedSet ? (selectedSet.id ?? selectedSet.name) : '';
   const setTotal = (selectedSet?.price ?? 0) * setQuantity;
-  const mealTotal = mealOptions.reduce((s, m) => s + ((mealSelections[m.name] || 0) * (m.price ?? 0)), 0);
 
   const handleSubmitRes = () => {
       onSubmitRes(event.id, resItems);
@@ -171,7 +170,6 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
         orderPayload.setType = selectedSet?.name ?? setTypeId;
         orderPayload.setQuantity = setQuantity;
         orderPayload.setPrice = selectedSet?.price;
-        orderPayload.mealTotal = mealTotal;
         orderPayload.mealSelections = Object.entries(mealSelections)
           .filter(([, q]) => q > 0)
           .map(([name, quantity]) => ({ name, quantity }));
@@ -312,7 +310,7 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
   }
 
   const ilpumTotal = rooms.reduce((a, r) => a + r.totalPrice, 0);
-  const finalTotal = isSetOrder ? setTotal + mealTotal : ilpumTotal;
+  const finalTotal = isSetOrder ? setTotal : ilpumTotal;
   const finalPrice = payMode.includes('위드스페이스') ? Math.round(finalTotal * 1.1) : finalTotal;
 
   return (
@@ -355,7 +353,7 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
                     </div>
                     {mealOptions.length > 0 && (
                       <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-xl overflow-hidden w-full min-w-0">
-                        <div className="bg-stone-100 px-4 sm:px-6 py-3 font-black text-stone-600 text-xs uppercase tracking-widest">식사 메뉴 (별도 선택)</div>
+                        <div className="bg-stone-100 px-4 sm:px-6 py-3 font-black text-stone-600 text-xs uppercase tracking-widest">식사 메뉴 (정식에 포함 · 종류만 선택)</div>
                         <div className="divide-y divide-stone-50 p-2 sm:p-3 font-black">
                           {mealOptions.map(item => (
                             <div key={item.id ?? item.name} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 min-w-0">

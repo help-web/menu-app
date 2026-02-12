@@ -283,7 +283,6 @@ export default function App() {
       setQuantity,
       mealSelections,
       setPrice,
-      mealTotal,
     } = orderPayload;
     const newOrder = {
       id: `ord-${Date.now()}`,
@@ -300,7 +299,6 @@ export default function App() {
       setQuantity,
       mealSelections: mealSelections ?? undefined,
       setPrice,
-      mealTotal,
     };
     const evt = events.find((e) => e.id === eventId);
     if (!evt) return;
