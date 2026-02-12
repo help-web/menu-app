@@ -115,6 +115,7 @@ export default function App() {
   );
   const [toast, setToast] = useState(null);
   const [baseUrl, setBaseUrl] = useState('');
+  const [dataLoading, setDataLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -122,14 +123,18 @@ export default function App() {
   }, []);
 
   const fetchData = async () => {
-    const { data: restaurantData } = await supabase.from('restaurants').select('*');
-    const { data: eventData } = await supabase.from('events').select('*');
+    try {
+      const { data: restaurantData } = await supabase.from('restaurants').select('*');
+      const { data: eventData } = await supabase.from('events').select('*');
 
-    if (Array.isArray(restaurantData)) {
-      setRestaurants(restaurantData.map(restaurantRowToApp).filter(Boolean));
-    }
-    if (Array.isArray(eventData)) {
-      setEvents(eventData.map(eventRowToApp).filter(Boolean));
+      if (Array.isArray(restaurantData)) {
+        setRestaurants(restaurantData.map(restaurantRowToApp).filter(Boolean));
+      }
+      if (Array.isArray(eventData)) {
+        setEvents(eventData.map(eventRowToApp).filter(Boolean));
+      }
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -413,6 +418,7 @@ export default function App() {
           path="/res/:eventId"
           element={
             <UserPage
+              loading={dataLoading}
               events={events}
               allRestaurants={restaurants}
               globalNotice={globalNotice}
@@ -435,6 +441,7 @@ export default function App() {
           path="/order/:eventId"
           element={
             <UserPage
+              loading={dataLoading}
               events={events}
               allRestaurants={restaurants}
               globalNotice={globalNotice}
