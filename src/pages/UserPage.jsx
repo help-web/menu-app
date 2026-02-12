@@ -135,19 +135,27 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
   const updateQty = (rid, name, delta) => {
     setRooms(rooms.map(r => r.id === rid ? { ...r, items: { ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }, totalPrice: Object.entries({ ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }).reduce((s, [n, q]) => s + getIlpumPrice(n) * q, 0) } : r));
   };
+  const mealTotalSum = Object.values(mealSelections).reduce((a, q) => a + q, 0);
   const updateMealQty = (name, delta) => {
     setMealSelections(prev => {
-      const next = { ...prev };
-      const cur = (next[name] || 0) + delta;
-      if (cur <= 0) delete next[name];
-      else next[name] = cur;
-      return next;
+      const cur = (prev[name] || 0) + delta;
+      if (cur <= 0) {
+        const next = { ...prev }; delete next[name]; return next;
+      }
+      if (delta > 0) {
+        const prevSum = Object.values(prev).reduce((a, q) => a + q, 0);
+        if (prevSum >= setQuantity) return prev;
+      }
+      return { ...prev, [name]: cur };
     });
   };
   const setMealQtyInput = (name, val) => {
     const q = val === '' ? 0 : parseInt(val);
     if (isNaN(q) || q < 0) return;
-    setMealSelections(prev => (q === 0 ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: q }));
+    const otherSum = mealTotalSum - (mealSelections[name] || 0);
+    const maxForThis = Math.max(0, setQuantity - otherSum);
+    const capped = Math.min(q, maxForThis);
+    setMealSelections(prev => (capped === 0 ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: capped }));
   };
   const selectedSet = (setTypeId != null ? setMenus.find(m => m.id === setTypeId || m.name === setTypeId) : null) || (setMenus[0] ?? null);
   const effectiveSetId = selectedSet ? (selectedSet.id ?? selectedSet.name) : '';
@@ -353,18 +361,22 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
                     </div>
                     {mealOptions.length > 0 && (
                       <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-xl overflow-hidden w-full min-w-0">
-                        <div className="bg-stone-100 px-4 sm:px-6 py-3 font-black text-stone-600 text-xs uppercase tracking-widest">식사 메뉴 (정식에 포함 · 종류만 선택)</div>
+                        <div className="bg-stone-100 px-4 sm:px-6 py-3 font-black text-stone-600 text-xs uppercase tracking-widest">식사 메뉴 (정식에 포함 · 1인 1개)</div>
+                        <p className="px-4 pt-2 text-[10px] text-stone-500 font-bold">총 합계가 정식 수량({setQuantity}개)을 넘을 수 없습니다.</p>
                         <div className="divide-y divide-stone-50 p-2 sm:p-3 font-black">
-                          {mealOptions.map(item => (
-                            <div key={item.id ?? item.name} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 min-w-0">
-                              <div className="min-w-0"><p className="font-bold text-stone-800 text-sm sm:text-base truncate">{item.name}</p><p className="text-xs font-black text-stone-400 mt-0.5">{Number(item.price).toLocaleString()}원</p></div>
-                              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
-                                <button type="button" onClick={() => updateMealQty(item.name, -1)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition border-2 shrink-0 ${(mealSelections[item.name] || 0) > 0 ? 'bg-white text-stone-900 border-stone-200 shadow-sm' : 'bg-stone-50 text-stone-200 border-stone-100'}`}><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button>
-                                <input type="number" className="w-10 sm:w-12 text-center font-black text-lg bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 mx-1 min-w-0" value={mealSelections[item.name] || 0} onChange={e => setMealQtyInput(item.name, e.target.value)} onFocus={e => e.target.select()}/>
-                                <button type="button" onClick={() => updateMealQty(item.name, 1)} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100 transition shrink-0"><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                          {mealOptions.map(item => {
+                            const atLimit = mealTotalSum >= setQuantity;
+                            return (
+                              <div key={item.id ?? item.name} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 min-w-0">
+                                <div className="min-w-0"><p className="font-bold text-stone-800 text-sm sm:text-base truncate">{item.name}</p></div>
+                                <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+                                  <button type="button" onClick={() => updateMealQty(item.name, -1)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition border-2 shrink-0 ${(mealSelections[item.name] || 0) > 0 ? 'bg-white text-stone-900 border-stone-200 shadow-sm' : 'bg-stone-50 text-stone-200 border-stone-100'}`}><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                                  <input type="number" className="w-10 sm:w-12 text-center font-black text-lg bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 mx-1 min-w-0" value={mealSelections[item.name] || 0} onChange={e => setMealQtyInput(item.name, e.target.value)} onFocus={e => e.target.select()} min={0} max={setQuantity}/>
+                                  <button type="button" onClick={() => updateMealQty(item.name, 1)} disabled={atLimit} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 shrink-0 transition ${atLimit ? 'bg-stone-100 text-stone-300 border-stone-100 cursor-not-allowed' : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'}`}><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

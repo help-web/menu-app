@@ -11,7 +11,7 @@ const emptyForm = () => ({
   mealOptions: [],
 });
 
-function MenuBlock({ title, icon: Icon, items, onAdd, onRemove, newItem, setNewItem, placeholderName = '메뉴 이름' }) {
+function MenuBlock({ title, icon: Icon, items, onAdd, onRemove, newItem, setNewItem, placeholderName = '메뉴 이름', nameOnly = false }) {
   return (
     <div className="bg-stone-50 p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border border-stone-100 shadow-inner w-full min-w-0">
       <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest px-1 mb-3 flex items-center gap-2">
@@ -25,17 +25,24 @@ function MenuBlock({ title, icon: Icon, items, onAdd, onRemove, newItem, setNewI
           value={newItem.name}
           onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
         />
-        <input
-          className="w-full sm:w-28 md:w-32 min-w-0 bg-white border-none rounded-xl sm:rounded-2xl p-3 sm:p-4 text-sm shadow-sm font-bold"
-          placeholder="가격(원)"
-          type="number"
-          value={newItem.price}
-          onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value === '' ? '' : parseInt(e.target.value) }))}
-        />
+        {!nameOnly && (
+          <input
+            className="w-full sm:w-28 md:w-32 min-w-0 bg-white border-none rounded-xl sm:rounded-2xl p-3 sm:p-4 text-sm shadow-sm font-bold"
+            placeholder="가격(원)"
+            type="number"
+            value={newItem.price}
+            onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+          />
+        )}
         <button
           type="button"
           onClick={() => {
-            if (newItem.name && newItem.price !== '' && Number(newItem.price) >= 0) {
+            if (nameOnly) {
+              if (newItem.name?.trim()) {
+                onAdd({ id: Date.now(), name: newItem.name.trim() });
+                setNewItem({ name: '' });
+              }
+            } else if (newItem.name && newItem.price !== '' && Number(newItem.price) >= 0) {
               onAdd({ id: Date.now(), name: newItem.name, price: Number(newItem.price) });
               setNewItem({ name: '', price: '' });
             }
@@ -52,7 +59,9 @@ function MenuBlock({ title, icon: Icon, items, onAdd, onRemove, newItem, setNewI
             className="bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border text-xs font-black flex items-center gap-2 sm:gap-3 shadow-sm border-stone-100 max-w-full min-w-0"
           >
             <span className="truncate">{item.name}</span>
-            <span className="text-emerald-600 shrink-0">{Number(item.price).toLocaleString()}원</span>
+            {!nameOnly && item.price != null && (
+              <span className="text-emerald-600 shrink-0">{Number(item.price).toLocaleString()}원</span>
+            )}
             <button type="button" onClick={() => onRemove(item.id)} className="text-stone-300 hover:text-red-500 transition-colors shrink-0">
               <X size={14} className="sm:w-4 sm:h-4" />
             </button>
@@ -69,7 +78,7 @@ export default function RestaurantSection({ restaurants, onAdd, onUpdate, onDele
   const [form, setForm] = useState(emptyForm());
   const [newIlpum, setNewIlpum] = useState({ name: '', price: '' });
   const [newSet, setNewSet] = useState({ name: '', price: '' });
-  const [newMeal, setNewMeal] = useState({ name: '', price: '' });
+  const [newMeal, setNewMeal] = useState({ name: '' });
   const menuRef = useRef(null);
   const mapRef = useRef(null);
   const handleFile = (e, t) => {
@@ -104,7 +113,7 @@ export default function RestaurantSection({ restaurants, onAdd, onUpdate, onDele
     }
     setNewIlpum({ name: '', price: '' });
     setNewSet({ name: '', price: '' });
-    setNewMeal({ name: '', price: '' });
+    setNewMeal({ name: '' });
     setShowAdd(true);
     scrollToTop();
   };
@@ -203,7 +212,7 @@ export default function RestaurantSection({ restaurants, onAdd, onUpdate, onDele
             placeholderName="정식 이름 (예: 정식 A)"
           />
           <MenuBlock
-            title="식사 메뉴 (정식 선택 시 함께 선택)"
+            title="식사 메뉴 (정식에 포함, 종류만 등록)"
             icon={Coffee}
             items={form.mealOptions || []}
             onAdd={item => setForm(f => ({ ...f, mealOptions: [...(f.mealOptions || []), item] }))}
@@ -211,6 +220,7 @@ export default function RestaurantSection({ restaurants, onAdd, onUpdate, onDele
             newItem={newMeal}
             setNewItem={setNewMeal}
             placeholderName="식사 메뉴 (예: 냉면, 찌개)"
+            nameOnly
           />
 
           <button
