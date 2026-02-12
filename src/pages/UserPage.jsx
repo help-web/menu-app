@@ -407,7 +407,9 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
                         </p>
                     )}
                 </div>
-                <button type="button" onClick={handleBack} className="text-stone-400 text-xs font-black tracking-widest uppercase hover:text-stone-600 transition-all flex items-center gap-2 mx-auto pb-10"><ArrowLeft size={14}/> 관리자 화면으로 돌아가기</button>
+                {mode !== 'order' && (
+                  <button type="button" onClick={handleBack} className="text-stone-400 text-xs font-black tracking-widest uppercase hover:text-stone-600 transition-all flex items-center gap-2 mx-auto pb-10"><ArrowLeft size={14}/> 관리자 화면으로 돌아가기</button>
+                )}
               </div>
             )}
             {activeTab === 'menu' && (

@@ -13,6 +13,7 @@ import AdminPage from './pages/AdminPage.jsx';
 import UserPage from './pages/UserPage.jsx';
 import ReservationListPage from './pages/ReservationListPage.jsx';
 import ReservationCompletePage from './pages/ReservationCompletePage.jsx';
+import OrderCompletePage from './pages/OrderCompletePage.jsx';
 
 const STORAGE_KEYS = {
   resTemplate: 'menu-app-resTemplate',
@@ -71,19 +72,35 @@ function eventAppToRow(evt) {
   };
 }
 
+function parseJsonArray(val) {
+  if (Array.isArray(val)) return val;
+  if (val == null) return [];
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function restaurantRowToApp(row) {
   if (!row) return null;
-  const ilpum = Array.isArray(row.ilpum_menus) ? row.ilpum_menus : [];
-  const setMenus = Array.isArray(row.set_menus) ? row.set_menus : [];
-  const mealOptions = Array.isArray(row.meal_options) ? row.meal_options : [];
-  const items = Array.isArray(row.items) ? row.items : [];
+  const ilpum = parseJsonArray(row.ilpum_menus);
+  const setMenus = parseJsonArray(row.set_menus);
+  const mealOptions = parseJsonArray(row.meal_options);
+  const items = parseJsonArray(row.items);
+  const useItemsAsIlpum = ilpum.length === 0 && items.length > 0;
+  const ilpumMenus = useItemsAsIlpum ? items : ilpum;
   return {
     id: row.id,
     name: row.name ?? '',
     menuImage: row.menu_image ?? '',
     mapImage: row.map_image ?? '',
-    items: ilpum.length > 0 ? ilpum : items,
-    ilpumMenus: ilpum.length > 0 ? ilpum : items,
+    items: ilpumMenus,
+    ilpumMenus: ilpumMenus,
     setMenus,
     mealOptions,
   };
@@ -454,9 +471,9 @@ export default function App() {
                 await submitReservation(id, data);
                 navigate(`/res/${id}/complete`);
               }}
-              onSubmitOrder={(id, orderPayload, groupId, isReplacing) => {
-                submitOrder(id, orderPayload, groupId, isReplacing);
-                navigate('/');
+              onSubmitOrder={async (id, orderPayload, groupId, isReplacing) => {
+                await submitOrder(id, orderPayload, groupId, isReplacing);
+                navigate(`/order/${id}/complete`, { state: { groupId: groupId ?? undefined } });
               }}
               onBack={() => navigate('/')}
             />
@@ -470,6 +487,10 @@ export default function App() {
               onBack={() => navigate('/')}
             />
           }
+        />
+        <Route
+          path="/order/:eventId/complete"
+          element={<OrderCompletePage fetchEvent={fetchEventById} />}
         />
         <Route
           path="/order/:eventId"
@@ -486,11 +507,11 @@ export default function App() {
                 submitReservation(id, data);
                 navigate('/');
               }}
-              onSubmitOrder={(id, orderPayload, groupId, isReplacing) => {
-                submitOrder(id, orderPayload, groupId, isReplacing);
-                navigate('/');
+              onSubmitOrder={async (id, orderPayload, groupId, isReplacing) => {
+                await submitOrder(id, orderPayload, groupId, isReplacing);
+                navigate(`/order/${id}/complete`, { state: { groupId: groupId ?? undefined } });
               }}
-              onBack={() => navigate('/')}
+              onBack={() => {}}
             />
           }
         />
