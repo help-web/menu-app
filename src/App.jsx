@@ -12,6 +12,7 @@ import { getBaseUrl, copyTextToClipboard, getFormattedDateWithDay } from './util
 import AdminPage from './pages/AdminPage.jsx';
 import UserPage from './pages/UserPage.jsx';
 import ReservationListPage from './pages/ReservationListPage.jsx';
+import ReservationCompletePage from './pages/ReservationCompletePage.jsx';
 
 const STORAGE_KEYS = {
   resTemplate: 'menu-app-resTemplate',
@@ -388,6 +389,12 @@ export default function App() {
     if (!error) setEvents((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const fetchEventById = async (eventId) => {
+    const { data, error } = await supabase.from('events').select('*').eq('id', eventId).single();
+    if (error || !data) return null;
+    return eventRowToApp(data);
+  };
+
   return (
     <div className="font-sans antialiased text-stone-900 bg-stone-50 min-h-screen">
       <Routes>
@@ -443,14 +450,23 @@ export default function App() {
               assignTitle={assignTitle}
               assignDesc={assignDesc}
               mode="res"
-              onSubmitRes={(id, data) => {
-                submitReservation(id, data);
-                navigate('/');
+              onSubmitRes={async (id, data) => {
+                await submitReservation(id, data);
+                navigate(`/res/${id}/complete`);
               }}
               onSubmitOrder={(id, orderPayload, groupId, isReplacing) => {
                 submitOrder(id, orderPayload, groupId, isReplacing);
                 navigate('/');
               }}
+              onBack={() => navigate('/')}
+            />
+          }
+        />
+        <Route
+          path="/res/:eventId/complete"
+          element={
+            <ReservationCompletePage
+              fetchEvent={fetchEventById}
               onBack={() => navigate('/')}
             />
           }
