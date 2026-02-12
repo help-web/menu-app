@@ -30,28 +30,36 @@ const INITIAL_RESTAURANTS = [
     name: '충정화로',
     menuImage: 'https://images.unsplash.com/photo-1555243821-208b4317996c?w=1200&q=80',
     mapImage: 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5ce?w=1200&q=80',
-    items: [
+    items: [],
+    ilpumMenus: [
       { id: 1, name: '갈비탕', price: 15000 },
       { id: 2, name: '육회비빔밥', price: 12000 },
       { id: 3, name: '떡갈비비빔밥', price: 11000 },
       { id: 4, name: '된장찌개', price: 9000 },
-      { id: 5, name: '물냉면', price: 9000 },
-      { id: 6, name: '비빔냉면', price: 9000 },
+    ],
+    setMenus: [
       { id: 7, name: '소고기 정식A', price: 30000 },
       { id: 8, name: '소고기 정식B', price: 25000 },
-    ]
+    ],
+    mealOptions: [
+      { id: 5, name: '물냉면', price: 9000 },
+      { id: 6, name: '비빔냉면', price: 9000 },
+    ],
   },
   {
     id: 'rest-2',
     name: '화우',
     menuImage: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=1200&q=80',
     mapImage: 'https://images.unsplash.com/photo-1511316730460-1e5828801265?w=1200&q=80',
-    items: [
+    items: [],
+    ilpumMenus: [
       { id: 9, name: '한우 불고기', price: 28000 },
       { id: 10, name: '낙지 볶음', price: 18000 },
       { id: 11, name: '해물 파전', price: 20000 },
-    ]
-  }
+    ],
+    setMenus: [],
+    mealOptions: [],
+  },
 ];
 
 const INITIAL_EVENTS = [

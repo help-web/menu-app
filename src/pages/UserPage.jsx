@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Calendar, X, Check, Home, ArrowLeft, Clock, Megaphone, CalendarPlus, ChevronDown, Maximize2,
+  Calendar, X, Check, Home, ArrowLeft, Clock, Megaphone, CalendarPlus, ChevronDown, ChevronUp, Maximize2,
   MessageSquareText, Split, ArrowRightCircle, Clock3, Users, ChefHat, MessageSquare, CheckCircle,
   MinusCircle, PlusCircle, ArrowRight, MapPin, UtensilsCrossed,
 } from 'lucide-react';
-import { getFormattedDateWithDay, getFormattedDateWithDaySegments } from '../utils/helpers.js';
+import { getFormattedDateWithDay, getFormattedDateWithDaySegments, getRestaurantMenus } from '../utils/helpers.js';
 
 export default function UserPage({ loading = false, events, allRestaurants, globalNotice, assignTitle, assignDesc, mode, onSubmitRes, onSubmitOrder, onBack }) {
   const { eventId } = useParams();
@@ -24,6 +24,9 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
   const [menuConfirmRestId, setMenuConfirmRestId] = useState(null);
   const [menuConfirmTab, setMenuConfirmTab] = useState('menu');
   const [orderNote, setOrderNote] = useState('');
+  const [setTypeId, setSetTypeId] = useState(null);
+  const [setQuantity, setSetQuantity] = useState(0);
+  const [mealSelections, setMealSelections] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,16 +47,53 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
         const group = event.assignedGroups.find(g => g.id === selectedGroupId);
         if (group) {
           const existing = event?.orders?.find(o => o.groupId === selectedGroupId);
-          if (existing?.rooms?.length) {
+          const isSetOrder = existing?.menuType === 'set';
+          if (isSetOrder && existing) {
+            setSetTypeId(existing.setType ?? null);
+            setSetQuantity(existing.setQuantity ?? 0);
+            const sel = {};
+            (existing.mealSelections || []).forEach(m => { sel[m.name] = m.quantity; });
+            setMealSelections(sel);
+            setOrderNote(existing.note || '');
+          } else if (existing?.rooms?.length) {
             setRooms(existing.rooms.map((r, i) => ({ ...r, id: r.id || Date.now() + i, items: { ...(r.items || {}) }, totalPrice: r.totalPrice ?? 0 })));
             setOrderNote(existing.note || '');
+            setSetTypeId(null);
+            setSetQuantity(0);
+            setMealSelections({});
           } else {
             setRooms([{ id: Date.now(), roomName: group.name, items: {}, totalPrice: 0 }]);
             setOrderNote('');
+            setSetTypeId(null);
+            setSetQuantity(0);
+            setMealSelections({});
           }
         }
     }
   }, [selectedGroupId, event]);
+
+  useEffect(() => {
+    if (!selectedGroupId && event?.orders?.length && event.assignedRestaurantId) {
+      const existing = event.orders.find(o => !o.groupId) ?? event.latestOrder;
+      if (existing) {
+        const isSetOrder = existing.menuType === 'set';
+        if (isSetOrder) {
+          setSetTypeId(existing.setType ?? null);
+          setSetQuantity(existing.setQuantity ?? 0);
+          const sel = {};
+          (existing.mealSelections || []).forEach(m => { sel[m.name] = m.quantity; });
+          setMealSelections(sel);
+          setOrderNote(existing.note || '');
+        } else if (existing.rooms?.length) {
+          setRooms(existing.rooms.map((r, i) => ({ ...r, id: r.id || Date.now() + i, items: { ...(r.items || {}) }, totalPrice: r.totalPrice ?? 0 })));
+          setOrderNote(existing.note || '');
+          setSetTypeId(null);
+          setSetQuantity(0);
+          setMealSelections({});
+        }
+      }
+    }
+  }, [selectedGroupId, event?.orders, event?.latestOrder, event?.assignedRestaurantId]);
 
   if (loading) {
     return (
@@ -76,18 +116,43 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
     ? allRestaurants.find(r => r.id === event.assignedRestaurantId)
     : (selectedGroupId ? allRestaurants.find(r => r.id === event.assignedGroups.find(g => g.id === selectedGroupId)?.restaurantId) : null);
 
+  const { ilpumMenus, setMenus, mealOptions } = getRestaurantMenus(assignedRest);
+  const orderMenuType = selectedGroupId
+    ? (event.assignedGroups?.find(g => g.id === selectedGroupId)?.menuType ?? '일품')
+    : (event.resData?.[0]?.menuType ?? '일품');
+  const isSetOrder = orderMenuType === '정식';
+
   const addResDay = () => setResItems([...resItems, { id: Date.now(), date: '', headcount: '', arrivalTime: '', restaurantId: '', menuType: '일품', paymentMethod: '기관 직접 결제', note: '' }]);
   const removeResDay = (id) => resItems.length > 1 && setResItems(resItems.filter(i => i.id !== id));
 
+  const getIlpumPrice = (name) => ilpumMenus.find(i => i.name === name)?.price ?? 0;
   const handleQtyInput = (rid, name, e) => {
     const val = e.target.value;
     const newQty = val === '' ? 0 : parseInt(val);
     if (isNaN(newQty) || newQty < 0) return;
-    setRooms(rooms.map(r => r.id === rid ? { ...r, items: { ...r.items, [name]: newQty }, totalPrice: Object.entries({ ...r.items, [name]: newQty }).reduce((s, [n, q]) => s + (assignedRest?.items.find(i => i.name === n)?.price || 0) * q, 0) } : r));
+    setRooms(rooms.map(r => r.id === rid ? { ...r, items: { ...r.items, [name]: newQty }, totalPrice: Object.entries({ ...r.items, [name]: newQty }).reduce((s, [n, q]) => s + getIlpumPrice(n) * q, 0) } : r));
   };
   const updateQty = (rid, name, delta) => {
-    setRooms(rooms.map(r => r.id === rid ? { ...r, items: { ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }, totalPrice: Object.entries({ ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }).reduce((s, [n, q]) => s + (assignedRest?.items.find(i => i.name === n)?.price || 0) * q, 0) } : r));
+    setRooms(rooms.map(r => r.id === rid ? { ...r, items: { ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }, totalPrice: Object.entries({ ...r.items, [name]: Math.max(0, (r.items[name] || 0) + delta) }).reduce((s, [n, q]) => s + getIlpumPrice(n) * q, 0) } : r));
   };
+  const updateMealQty = (name, delta) => {
+    setMealSelections(prev => {
+      const next = { ...prev };
+      const cur = (next[name] || 0) + delta;
+      if (cur <= 0) delete next[name];
+      else next[name] = cur;
+      return next;
+    });
+  };
+  const setMealQtyInput = (name, val) => {
+    const q = val === '' ? 0 : parseInt(val);
+    if (isNaN(q) || q < 0) return;
+    setMealSelections(prev => (q === 0 ? (() => { const p = { ...prev }; delete p[name]; return p; })() : { ...prev, [name]: q }));
+  };
+  const selectedSet = (setTypeId != null ? setMenus.find(m => m.id === setTypeId || m.name === setTypeId) : null) || (setMenus[0] ?? null);
+  const effectiveSetId = selectedSet ? (selectedSet.id ?? selectedSet.name) : '';
+  const setTotal = (selectedSet?.price ?? 0) * setQuantity;
+  const mealTotal = mealOptions.reduce((s, m) => s + ((mealSelections[m.name] || 0) * (m.price ?? 0)), 0);
 
   const handleSubmitRes = () => {
       onSubmitRes(event.id, resItems);
@@ -96,7 +161,25 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
 
   const handleSubmitOrder = () => {
       const isReplacing = !!existingOrderForGroup;
-      onSubmitOrder(event.id, rooms, payMode, assignedRest.name, selectedGroupId ?? undefined, orderNote, isReplacing);
+      const orderPayload = {
+        restaurantName: assignedRest.name,
+        paymentMethod: payMode,
+        note: orderNote,
+      };
+      if (isSetOrder) {
+        orderPayload.menuType = 'set';
+        orderPayload.setType = selectedSet?.name ?? setTypeId;
+        orderPayload.setQuantity = setQuantity;
+        orderPayload.setPrice = selectedSet?.price;
+        orderPayload.mealTotal = mealTotal;
+        orderPayload.mealSelections = Object.entries(mealSelections)
+          .filter(([, q]) => q > 0)
+          .map(([name, quantity]) => ({ name, quantity }));
+      } else {
+        orderPayload.menuType = 'ilpum';
+        orderPayload.rooms = rooms;
+      }
+      onSubmitOrder(event.id, orderPayload, selectedGroupId ?? undefined, isReplacing);
       setIsResSubmitted(true);
   };
 
@@ -140,6 +223,13 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
                 if (!rest) return null;
                 return (
                   <div className="bg-stone-50 rounded-2xl border border-stone-100 p-5 space-y-4 animate-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-black text-stone-600 truncate">{rest.name} 메뉴·약도</span>
+                      <button type="button" onClick={() => setMenuConfirmRestId(null)} className="flex items-center gap-1.5 shrink-0 py-2 px-3 rounded-lg text-xs font-black text-stone-500 hover:bg-stone-200/80 hover:text-stone-700 transition-colors" aria-label="접기">
+                        <ChevronUp size={16} />
+                        <span>접기</span>
+                      </button>
+                    </div>
                     <div className="flex p-1.5 bg-stone-200/60 rounded-xl">
                       <button type="button" onClick={() => setMenuConfirmTab('menu')} className={`flex-1 py-3 rounded-lg text-xs font-black transition-all ${menuConfirmTab === 'menu' ? 'bg-white text-stone-900 shadow' : 'text-stone-500'}`}>메뉴판</button>
                       <button type="button" onClick={() => setMenuConfirmTab('map')} className={`flex-1 py-3 rounded-lg text-xs font-black transition-all ${menuConfirmTab === 'map' ? 'bg-white text-stone-900 shadow' : 'text-stone-500'}`}>찾아가는 길</button>
@@ -221,7 +311,8 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
     );
   }
 
-  const finalTotal = rooms.reduce((a, r) => a + r.totalPrice, 0);
+  const ilpumTotal = rooms.reduce((a, r) => a + r.totalPrice, 0);
+  const finalTotal = isSetOrder ? setTotal + mealTotal : ilpumTotal;
   const finalPrice = payMode.includes('위드스페이스') ? Math.round(finalTotal * 1.1) : finalTotal;
 
   return (
@@ -240,13 +331,56 @@ export default function UserPage({ loading = false, events, allRestaurants, glob
             <div className="flex bg-stone-200/50 p-1.5 rounded-xl sm:rounded-[1.5rem] mb-6 sm:mb-10 border border-stone-200 shadow-inner font-black min-w-0"><button type="button" onClick={() => setActiveTab('order')} className={`flex-1 min-w-0 py-3 sm:py-3.5 rounded-lg sm:rounded-[1.2rem] text-xs uppercase transition-all ${activeTab === 'order' ? 'bg-white text-stone-900 shadow-lg font-black' : 'text-stone-400'}`}>수량 선택</button><button type="button" onClick={() => setActiveTab('menu')} className={`flex-1 min-w-0 py-3 sm:py-3.5 rounded-lg sm:rounded-[1.2rem] text-xs uppercase transition-all ${activeTab === 'menu' ? 'bg-white text-stone-900 shadow-lg font-black' : 'text-stone-400'}`}>메뉴판</button><button type="button" onClick={() => setActiveTab('map')} className={`flex-1 min-w-0 py-3 sm:py-3.5 rounded-lg sm:rounded-[1.2rem] text-xs uppercase transition-all ${activeTab === 'map' ? 'bg-white text-stone-900 shadow-lg font-black' : 'text-stone-400'}`}>약도</button></div>
             {activeTab === 'order' && (
               <div className="space-y-4 sm:space-y-6 font-black w-full min-w-0">
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 shadow-sm min-w-0"><div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-lg animate-in zoom-in shadow-emerald-100"><CheckCircle size={28} className="sm:w-8 sm:h-8"/></div><div className="min-w-0 flex-1"><p className="text-emerald-900 font-black text-base sm:text-lg italic break-words">식사장소: {assignedRest?.name || assignTitle}</p><p className="text-emerald-700 text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed font-bold opacity-80 break-words">{assignDesc}</p></div></div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-6 shadow-sm min-w-0"><div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-600 text-white rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-lg animate-in zoom-in shadow-emerald-100"><CheckCircle size={28} className="sm:w-8 sm:h-8"/></div><div className="min-w-0 flex-1"><p className="text-emerald-900 font-black text-base sm:text-lg italic break-words">식사장소: {assignedRest?.name || assignTitle}</p><p className="text-emerald-700 text-xs sm:text-sm mt-1 sm:mt-1.5 leading-relaxed font-bold opacity-80 break-words">{assignDesc}</p><p className="text-[10px] text-emerald-600/80 mt-1 uppercase tracking-widest">{orderMenuType} 선택</p></div></div>
+
+                {isSetOrder ? (
+                  <>
+                    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-xl p-4 sm:p-6 w-full min-w-0">
+                      <p className="text-[10px] text-stone-500 uppercase tracking-widest px-1 mb-3 font-black">정식 종류</p>
+                      <div className="relative">
+                        <select className="w-full min-w-0 bg-stone-50 border-none rounded-xl p-3 sm:p-4 pr-10 text-sm focus:ring-2 focus:ring-emerald-500 font-black shadow-inner appearance-none cursor-pointer" value={effectiveSetId} onChange={e => setSetTypeId(e.target.value || null)}>
+                          {setMenus.length === 0 ? <option value="">정식 메뉴 없음</option> : setMenus.map(m => <option key={m.id ?? m.name} value={m.id ?? m.name}>{m.name} · {Number(m.price).toLocaleString()}원</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300 pointer-events-none" size={20} />
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-xl p-4 sm:p-6 w-full min-w-0">
+                      <p className="text-[10px] text-stone-500 uppercase tracking-widest px-1 mb-3 font-black">정식 수량</p>
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        <button type="button" onClick={() => setSetQuantity(q => Math.max(0, q - 1))} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 border-stone-200 bg-stone-50 text-stone-500 hover:bg-stone-100 transition shrink-0"><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                        <input type="number" className="w-16 sm:w-20 text-center font-black text-xl bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 min-w-0" value={setQuantity} onChange={e => { const v = e.target.value === '' ? 0 : parseInt(e.target.value); if (!isNaN(v) && v >= 0) setSetQuantity(v); }} onFocus={e => e.target.select()}/>
+                        <button type="button" onClick={() => setSetQuantity(q => q + 1)} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100 transition shrink-0"><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                        <span className="text-sm text-stone-500 font-bold">인분</span>
+                      </div>
+                    </div>
+                    {mealOptions.length > 0 && (
+                      <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-xl overflow-hidden w-full min-w-0">
+                        <div className="bg-stone-100 px-4 sm:px-6 py-3 font-black text-stone-600 text-xs uppercase tracking-widest">식사 메뉴 (별도 선택)</div>
+                        <div className="divide-y divide-stone-50 p-2 sm:p-3 font-black">
+                          {mealOptions.map(item => (
+                            <div key={item.id ?? item.name} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 min-w-0">
+                              <div className="min-w-0"><p className="font-bold text-stone-800 text-sm sm:text-base truncate">{item.name}</p><p className="text-xs font-black text-stone-400 mt-0.5">{Number(item.price).toLocaleString()}원</p></div>
+                              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+                                <button type="button" onClick={() => updateMealQty(item.name, -1)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition border-2 shrink-0 ${(mealSelections[item.name] || 0) > 0 ? 'bg-white text-stone-900 border-stone-200 shadow-sm' : 'bg-stone-50 text-stone-200 border-stone-100'}`}><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                                <input type="number" className="w-10 sm:w-12 text-center font-black text-lg bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 mx-1 min-w-0" value={mealSelections[item.name] || 0} onChange={e => setMealQtyInput(item.name, e.target.value)} onFocus={e => e.target.select()}/>
+                                <button type="button" onClick={() => updateMealQty(item.name, 1)} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100 transition shrink-0"><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
                 {rooms.map((room, idx) => (
                   <div key={room.id} className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-stone-100 shadow-2xl overflow-hidden animate-in zoom-in-95 shadow-stone-200/40 transition-all font-black w-full min-w-0"><div className="bg-stone-900 px-4 sm:px-8 py-4 sm:py-6 flex justify-between items-center gap-2 text-white shadow-lg min-w-0"><input className="bg-transparent font-black text-base sm:text-lg border-none focus:ring-0 p-0 flex-1 min-w-0 w-full" value={room.roomName} onChange={(e) => { const nr = [...rooms]; nr[idx].roomName = e.target.value; setRooms(nr); }} />{rooms.length > 1 && <button type="button" onClick={() => setRooms(rooms.filter(x => x.id !== room.id))} className="text-white/30 hover:text-white transition-colors shrink-0"><X size={22} className="sm:w-6 sm:h-6"/></button>}</div>
-                    <div className="divide-y divide-stone-50 p-2 sm:p-3 font-black">{assignedRest?.items.map(item => (<div key={item.id} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 group hover:bg-stone-50/50 transition-colors min-w-0"><div className="min-w-0"><p className="font-bold text-stone-800 text-sm sm:text-base truncate">{item.name}</p><p className="text-xs font-black text-stone-400 mt-0.5">{item.price.toLocaleString()}원</p></div><div className="flex items-center justify-end sm:justify-between gap-2 sm:gap-4 shrink-0"><button type="button" onClick={() => updateQty(room.id, item.name, -1)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition border-2 shrink-0 ${room.items[item.name] > 0 ? 'bg-white text-stone-900 border-stone-200 shadow-sm' : 'bg-stone-50 text-stone-200 border-stone-100'}`}><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button><input type="number" className={`w-10 sm:w-12 text-center font-black text-lg sm:text-xl bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 mx-1 sm:mx-2 min-w-0 ${room.items[item.name] > 0 ? 'text-emerald-600' : 'text-stone-300'}`} value={room.items[item.name] || 0} onChange={(e) => handleQtyInput(room.id, item.name, e)} onFocus={(e) => e.target.select()}/><button type="button" onClick={() => updateQty(room.id, item.name, 1)} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100 transition shadow-md active:scale-90 shrink-0"><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button></div></div>))}</div>
+                    <div className="divide-y divide-stone-50 p-2 sm:p-3 font-black">{ilpumMenus.map(item => (<div key={item.id ?? item.name} className="p-3 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 group hover:bg-stone-50/50 transition-colors min-w-0"><div className="min-w-0"><p className="font-bold text-stone-800 text-sm sm:text-base truncate">{item.name}</p><p className="text-xs font-black text-stone-400 mt-0.5">{Number(item.price).toLocaleString()}원</p></div><div className="flex items-center justify-end sm:justify-between gap-2 sm:gap-4 shrink-0"><button type="button" onClick={() => updateQty(room.id, item.name, -1)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition border-2 shrink-0 ${room.items[item.name] > 0 ? 'bg-white text-stone-900 border-stone-200 shadow-sm' : 'bg-stone-50 text-stone-200 border-stone-100'}`}><MinusCircle size={24} className="sm:w-8 sm:h-8"/></button><input type="number" className={`w-10 sm:w-12 text-center font-black text-lg sm:text-xl bg-transparent border-b border-stone-200 focus:border-emerald-500 focus:outline-none p-0 mx-1 sm:mx-2 min-w-0 ${room.items[item.name] > 0 ? 'text-emerald-600' : 'text-stone-300'}`} value={room.items[item.name] || 0} onChange={(e) => handleQtyInput(room.id, item.name, e)} onFocus={(e) => e.target.select()}/><button type="button" onClick={() => updateQty(room.id, item.name, 1)} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border-2 border-emerald-100 hover:bg-emerald-100 transition shadow-md active:scale-90 shrink-0"><PlusCircle size={24} className="sm:w-8 sm:h-8"/></button></div></div>))}</div>
                   </div>
                 ))}
                 <button type="button" onClick={() => setRooms([...rooms, { id: Date.now(), roomName: `회의실 ${rooms.length + 1}`, items: {}, totalPrice: 0 }])} className="w-full py-5 sm:py-7 border-2 border-dashed border-stone-200 rounded-2xl sm:rounded-[3rem] text-stone-400 font-black text-xs sm:text-sm uppercase tracking-widest hover:bg-white hover:border-emerald-200 transition-all duration-300 shadow-inner shadow-stone-100">+ 회의실 추가하기</button>
+                  </>
+                )}
                 <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-stone-100 font-black w-full min-w-0">
                   <p className="text-[10px] text-stone-400 uppercase tracking-widest px-1 flex items-center gap-1 font-bold mb-2"><MessageSquareText size={12}/> 요청 사항</p>
                   <textarea className="w-full min-w-0 h-24 bg-stone-50 border-none rounded-xl p-3 sm:p-4 text-sm focus:ring-2 focus:ring-emerald-500 font-bold shadow-inner resize-none placeholder:text-stone-400 placeholder:font-normal break-words" placeholder="특이사항을 입력해 주세요" value={orderNote} onChange={e => setOrderNote(e.target.value)} />

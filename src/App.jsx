@@ -72,12 +72,19 @@ function eventAppToRow(evt) {
 
 function restaurantRowToApp(row) {
   if (!row) return null;
+  const ilpum = Array.isArray(row.ilpum_menus) ? row.ilpum_menus : [];
+  const setMenus = Array.isArray(row.set_menus) ? row.set_menus : [];
+  const mealOptions = Array.isArray(row.meal_options) ? row.meal_options : [];
+  const items = Array.isArray(row.items) ? row.items : [];
   return {
     id: row.id,
     name: row.name ?? '',
     menuImage: row.menu_image ?? '',
     mapImage: row.map_image ?? '',
-    items: Array.isArray(row.items) ? row.items : [],
+    items: ilpum.length > 0 ? ilpum : items,
+    ilpumMenus: ilpum.length > 0 ? ilpum : items,
+    setMenus,
+    mealOptions,
   };
 }
 
@@ -86,7 +93,10 @@ function restaurantAppToRow(r) {
     name: r.name,
     menu_image: r.menuImage ?? '',
     map_image: r.mapImage ?? '',
-    items: r.items ?? [],
+    items: r.ilpumMenus ?? r.items ?? [],
+    ilpum_menus: r.ilpumMenus ?? [],
+    set_menus: r.setMenus ?? [],
+    meal_options: r.mealOptions ?? [],
   };
 }
 
@@ -262,25 +272,35 @@ export default function App() {
     showToast('일자별 식당 배정이 완료되었습니다.');
   };
 
-  const submitOrder = async (
-    eventId,
-    roomOrders,
-    paymentMethod,
-    restaurantName,
-    groupId = null,
-    orderNote = '',
-    isReplacing = false
-  ) => {
+  const submitOrder = async (eventId, orderPayload, groupId = null, isReplacing = false) => {
+    const {
+      restaurantName,
+      paymentMethod,
+      note: orderNote,
+      menuType,
+      rooms: roomOrders,
+      setType,
+      setQuantity,
+      mealSelections,
+      setPrice,
+      mealTotal,
+    } = orderPayload;
     const newOrder = {
       id: `ord-${Date.now()}`,
       groupId,
       restaurantName,
-      rooms: roomOrders,
       paymentMethod,
       note: orderNote || undefined,
       timestamp: new Date().toISOString(),
       isReorder: isReplacing,
       needsAdminCheck: isReplacing,
+      menuType: menuType || 'ilpum',
+      rooms: roomOrders ?? undefined,
+      setType,
+      setQuantity,
+      mealSelections: mealSelections ?? undefined,
+      setPrice,
+      mealTotal,
     };
     const evt = events.find((e) => e.id === eventId);
     if (!evt) return;
@@ -429,8 +449,8 @@ export default function App() {
                 submitReservation(id, data);
                 navigate('/');
               }}
-              onSubmitOrder={(id, orders, pay, restName, groupId, note, isReplacing) => {
-                submitOrder(id, orders, pay, restName, groupId, note, isReplacing);
+              onSubmitOrder={(id, orderPayload, groupId, isReplacing) => {
+                submitOrder(id, orderPayload, groupId, isReplacing);
                 navigate('/');
               }}
               onBack={() => navigate('/')}
@@ -452,8 +472,8 @@ export default function App() {
                 submitReservation(id, data);
                 navigate('/');
               }}
-              onSubmitOrder={(id, orders, pay, restName, groupId, note, isReplacing) => {
-                submitOrder(id, orders, pay, restName, groupId, note, isReplacing);
+              onSubmitOrder={(id, orderPayload, groupId, isReplacing) => {
+                submitOrder(id, orderPayload, groupId, isReplacing);
                 navigate('/');
               }}
               onBack={() => navigate('/')}

@@ -1,8 +1,11 @@
-import { X, Store, Camera } from 'lucide-react';
+import { X, Store, Camera, LayoutGrid } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 function OrderCard({ event, order, showToast }) {
-  const total = (order.rooms || []).reduce((a, r) => a + r.totalPrice, 0);
+  const isSetOrder = order.menuType === 'set';
+  const total = isSetOrder
+    ? (order.setQuantity ?? 0) * (order.setPrice ?? 0) + (order.mealTotal ?? 0)
+    : (order.rooms || []).reduce((a, r) => a + (r.totalPrice ?? 0), 0);
   const final = order.paymentMethod?.includes('위드스페이스') ? Math.round(total * 1.1) : total;
   const isReorder = order.isReorder;
   const needsCheck = order.needsAdminCheck;
@@ -11,20 +14,44 @@ function OrderCard({ event, order, showToast }) {
       <div className="flex items-center gap-2 mb-4 pb-3 border-b border-stone-200 flex-wrap">
         <Store size={18} className="text-emerald-600" />
         <span className="font-black text-stone-800">확정 식당: <span className="text-emerald-600">{order.restaurantName}</span></span>
+        {order.menuType === 'set' && <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1"><LayoutGrid size={10}/> 정식</span>}
         {isReorder && <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">재주문</span>}
         {needsCheck && <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">확인 필요</span>}
       </div>
       <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-        {(order.rooms || []).map(room => (
-          <div key={room.id} className="bg-white rounded-xl p-4 border border-stone-100">
-            <div className="font-black text-stone-800 mb-2 border-b border-stone-100 pb-2 text-sm">{room.roomName}</div>
-            <div className="space-y-1 text-sm">
-              {Object.entries(room.items || {}).map(([name, qty]) => qty > 0 && (
-                <div key={name} className="flex justify-between"><span className="text-stone-600">{name}</span><span className="font-bold text-stone-900">{qty}개</span></div>
-              ))}
+        {isSetOrder ? (
+          <div className="bg-white rounded-xl p-4 border border-stone-100 space-y-3">
+            <div>
+              <div className="font-black text-stone-800 mb-1 text-xs uppercase tracking-widest text-stone-500">정식</div>
+              <div className="flex justify-between items-center">
+                <span className="text-stone-700 font-bold">{order.setType ?? '-'}</span>
+                <span className="font-black text-stone-900">{order.setQuantity ?? 0}인분</span>
+              </div>
+              {order.setPrice != null && <div className="text-xs text-stone-500 mt-0.5">{Number(order.setPrice).toLocaleString()}원 × {order.setQuantity ?? 0}</div>}
             </div>
+            {(order.mealSelections?.length > 0) && (
+              <div>
+                <div className="font-black text-stone-800 mb-1 text-xs uppercase tracking-widest text-stone-500">식사 메뉴</div>
+                <div className="space-y-1 text-sm">
+                  {order.mealSelections.map((m, i) => (
+                    <div key={i} className="flex justify-between"><span className="text-stone-600">{m.name}</span><span className="font-bold text-stone-900">{m.quantity}개</span></div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+        ) : (
+          (order.rooms || []).map(room => (
+            <div key={room.id} className="bg-white rounded-xl p-4 border border-stone-100">
+              <div className="font-black text-stone-800 mb-2 border-b border-stone-100 pb-2 text-sm">{room.roomName}</div>
+              <div className="space-y-1 text-sm">
+                {Object.entries(room.items || {}).map(([name, qty]) => qty > 0 && (
+                  <div key={name} className="flex justify-between"><span className="text-stone-600">{name}</span><span className="font-bold text-stone-900">{qty}개</span></div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </div>
       {order.note && (
         <div className="mt-3 pt-3 border-t border-stone-200">

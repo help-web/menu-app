@@ -98,3 +98,14 @@ export function copyTextToClipboard(text) {
   document.body.removeChild(textArea);
   return Promise.resolve();
 }
+
+/** 식당에서 일품/정식/식사 메뉴 배열 반환 (하위 호환: items 있으면 ilpumMenus로 사용) */
+export function getRestaurantMenus(restaurant) {
+  if (!restaurant) return { ilpumMenus: [], setMenus: [], mealOptions: [] };
+  const ilpum = Array.isArray(restaurant.ilpumMenus) && restaurant.ilpumMenus.length > 0
+    ? restaurant.ilpumMenus
+    : (Array.isArray(restaurant.items) ? restaurant.items : []);
+  const setMenus = Array.isArray(restaurant.setMenus) ? restaurant.setMenus : [];
+  const mealOptions = Array.isArray(restaurant.mealOptions) ? restaurant.mealOptions : [];
+  return { ilpumMenus: ilpum, setMenus, mealOptions };
+}
